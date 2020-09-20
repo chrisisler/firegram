@@ -1,8 +1,10 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 import { Post } from './Post';
 import { Pad, Columns } from './style';
+import { db } from './firebase';
+import { PostData } from './interfaces';
 
 const Container = styled.div``;
 
@@ -22,29 +24,28 @@ const Logo = styled.img.attrs(() => ({
 `;
 
 export const App: FC = () => {
-  const [posts, setPosts] = useState([
-    {
-      username: 'chris isler',
-      caption: 'wow im the best',
-      imageUrl:
-        'https://cdn-images-1.medium.com/max/1200/1*y6C4nSvy2Woe0m7bWEn4BA.png',
-    },
-    {
-      username: 'ryan isler',
-      caption: 'caption 20 flakdjfalsdkfjalkdfj',
-      imageUrl:
-        'https://cdn-images-1.medium.com/max/1200/1*y6C4nSvy2Woe0m7bWEn4BA.png',
-    },
-  ]);
+  const [posts, setPosts] = useState<{ id: string; post: PostData }[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = db.collection('posts').onSnapshot(snapshot => {
+      const posts = snapshot.docs.map(doc => ({
+        id: doc.id,
+        post: doc.data() as PostData,
+      }));
+      setPosts(posts);
+    });
+    return unsubscribe;
+  }, []);
+
   return (
     <Container>
       <Header>
         <Logo />
       </Header>
       <Columns pad={Pad.Large}>
-        {posts.map(post => (
+        {posts.map(({ post, id }) => (
           <Post
-            key={post.caption}
+            key={id}
             username={post.username}
             caption={post.caption}
             imageUrl={post.imageUrl}

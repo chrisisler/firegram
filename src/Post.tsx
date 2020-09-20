@@ -11,7 +11,9 @@ const Container = styled.div`
 `;
 
 const Image = styled.img.attrs((props: { src?: string }) => ({
-  src: props?.src ?? 'https://cdn-images-1.medium.com/max/1200/1*y6C4nSvy2Woe0m7bWEn4BA.png',
+  src:
+    props?.src ??
+    'https://cdn-images-1.medium.com/max/1200/1*y6C4nSvy2Woe0m7bWEn4BA.png',
   alt: 'React JS',
 }))`
   width: 100%;
@@ -36,13 +38,14 @@ export const Post: FC<{
 }> = ({ username, caption, imageUrl }) => {
   return (
     <Container>
-      <Header>
+      <Header pad={Pad.Small}>
         <Avatar src="/static/images/avatar/1.jpg" alt="A" />
         <h3>{username}</h3>
       </Header>
       <Image src={imageUrl} />
       <Text>
-        <strong>{username}</strong>{caption}
+        <strong>{username}</strong>&nbsp;&nbsp;
+        {caption}
       </Text>
     </Container>
   );

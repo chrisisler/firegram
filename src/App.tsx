@@ -1,9 +1,10 @@
-import React, { FC, useState, useEffect } from 'react';
+import React, { FC, useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
+import { Modal, Button, TextField } from '@material-ui/core';
 
 import { Post } from './Post';
-import { Pad, Columns } from './style';
-import { db } from './firebase';
+import { Pad, Columns, Rows } from './style';
+import { db, auth } from './firebase';
 import { PostData } from './interfaces';
 
 const Container = styled.div``;
@@ -23,25 +24,142 @@ const Logo = styled.img.attrs(() => ({
   width: 120px;
 `;
 
+const ModalContainer = styled.div`
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  position: absolute;
+  background-color: #fafafa;
+  width: 400px;
+  border: none;
+  box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.3);
+  padding: ${Pad.Medium} ${Pad.Large};
+`;
+
 export const App: FC = () => {
+  // Modal and input states
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [openSignUpModal, setOpenSignUpModal] = useState(false);
+  const [openSignInModal, setOpenSignInModal] = useState(false);
+
+  // Authenticated user and loaded content
+  const [user, setUser] = useState(null);
   const [posts, setPosts] = useState<{ id: string; post: PostData }[]>([]);
 
+  const signUp = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      event.preventDefault();
+      auth
+        .createUserWithEmailAndPassword(email, password)
+        .then(({ user }) => user?.updateProfile({ displayName: username }))
+        .catch(error => alert(error.message));
+      setOpenSignUpModal(false);
+    },
+    [email, password, username]
+  );
+
+  const signIn = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      event.preventDefault();
+      auth
+        .signInWithEmailAndPassword(email, password)
+        .catch(error => alert(error.message));
+      setOpenSignInModal(false);
+    },
+    [email, password]
+  );
+
+  // Connect UI state to user sign in/out changes
   useEffect(() => {
-    const unsubscribe = db.collection('posts').onSnapshot(snapshot => {
+    return auth.onAuthStateChanged(user => {
+      if (!user) return setUser(null);
+      if (!user.displayName) {
+        return user.updateProfile({ displayName: username });
+      }
+    });
+  }, [user, username]);
+
+  // Fetch posts from DB and subscribe to DB updates to posts
+  useEffect(() => {
+    return db.collection('posts').onSnapshot(snapshot => {
       const posts = snapshot.docs.map(doc => ({
         id: doc.id,
         post: doc.data() as PostData,
       }));
       setPosts(posts);
     });
-    return unsubscribe;
   }, []);
 
   return (
     <Container>
+      <Modal open={openSignInModal} onClose={() => setOpenSignInModal(false)}>
+        <ModalContainer>
+          <form>
+            <Columns pad={Pad.Medium} style={{ margin: `${Pad.Large} 0` }}>
+              <TextField
+                placeholder="Email"
+                value={email}
+                onChange={event => setEmail(event.target.value)}
+              />
+              <TextField
+                type="Password"
+                placeholder="password"
+                value={password}
+                onChange={event => setPassword(event.target.value)}
+              />
+              <Button variant="outlined" onClick={signIn}>
+                Sign In
+              </Button>
+            </Columns>
+          </form>
+        </ModalContainer>
+      </Modal>
+      <Modal open={openSignUpModal} onClose={() => setOpenSignUpModal(false)}>
+        <ModalContainer>
+          <form>
+            <Columns pad={Pad.Medium} style={{ margin: `${Pad.Large} 0` }}>
+              <TextField
+                placeholder="Username"
+                value={username}
+                onChange={event => setUsername(event.target.value)}
+              />
+              <TextField
+                placeholder="Email"
+                value={email}
+                onChange={event => setEmail(event.target.value)}
+              />
+              <TextField
+                type="Password"
+                placeholder="password"
+                value={password}
+                onChange={event => setPassword(event.target.value)}
+              />
+              <Button variant="outlined" onClick={signUp}>
+                Sign Up
+              </Button>
+            </Columns>
+          </form>
+        </ModalContainer>
+      </Modal>
       <Header>
         <Logo />
       </Header>
+      {user ? (
+        <Button variant="outlined" onClick={() => auth.signOut()}>
+          Log Out
+        </Button>
+      ) : (
+        <Rows pad={Pad.Medium}>
+          <Button variant="outlined" onClick={() => setOpenSignInModal(true)}>
+            Sign In
+          </Button>
+          <Button variant="outlined" onClick={() => setOpenSignUpModal(true)}>
+            Sign Up
+          </Button>
+        </Rows>
+      )}
       <Columns pad={Pad.Large}>
         {posts.map(({ post, id }) => (
           <Post

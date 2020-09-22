@@ -39,7 +39,10 @@ export const Post: FC<{
   return (
     <Container>
       <Header pad={Pad.Small}>
-        <Avatar src="/static/images/avatar/1.jpg" alt="B" />
+        <Avatar
+          src="/static/images/avatar/1.jpg"
+          alt={username[0].toUpperCase()}
+        />
         <h3>{username}</h3>
       </Header>
       <Image src={imageUrl} />

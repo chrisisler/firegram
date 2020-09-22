@@ -1,7 +1,15 @@
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { Modal, Button, TextField } from '@material-ui/core';
+import {
+  Modal,
+  Button,
+  TextField,
+  CircularProgress,
+  Typography,
+} from '@material-ui/core';
+import { User } from 'firebase/app';
 
+import { DataState, DataStateView } from './DataState';
 import { Post } from './Post';
 import { ImageUpload } from './ImageUpload';
 import { Pad, Columns, Rows } from './style';
@@ -9,8 +17,7 @@ import { db, auth } from './firebase';
 import { PostData } from './interfaces';
 
 const AppContainer = styled.div`
-  /* width: 100%;
-  margin: 0 auto; */
+  padding-bottom: ${Pad.Large};
 `;
 
 const Header = styled(Rows)`
@@ -41,30 +48,34 @@ const ModalContainer = styled.div`
   padding: ${Pad.Medium} ${Pad.Large};
 `;
 
-const ContentContainer = styled(Columns)`
+const BodyContainer = styled(Columns)`
   max-width: 500px;
   width: 500px;
   margin: 0 auto;
 `;
 
 export const App: FC = () => {
-  // Modal and input states
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [openSignUpModal, setOpenSignUpModal] = useState(false);
   const [openSignInModal, setOpenSignInModal] = useState(false);
 
-  // Authenticated user and loaded content
-  const [user, setUser] = useState(null);
-  const [posts, setPosts] = useState<{ id: string; post: PostData }[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [posts, setPosts] = useState<
+    DataState<{ id: string; post: PostData }[]>
+  >([]);
 
   const signUp = useCallback(
     (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
       event.preventDefault();
       auth
         .createUserWithEmailAndPassword(email, password)
-        .then(({ user }) => user?.updateProfile({ displayName: username }))
+        .then(({ user }) => {
+          user?.updateProfile({ displayName: username });
+          // Is this needed? Missed?
+          // if (user) setUser(user);
+        })
         .catch(error => alert(error.message));
       setOpenSignUpModal(false);
     },
@@ -76,13 +87,15 @@ export const App: FC = () => {
       event.preventDefault();
       auth
         .signInWithEmailAndPassword(email, password)
+        .then(({ user }) => {
+          if (user) setUser(user);
+        })
         .catch(error => alert(error.message));
       setOpenSignInModal(false);
     },
     [email, password]
   );
 
-  // Connect UI state to user sign in/out changes
   useEffect(() => {
     return auth.onAuthStateChanged(user => {
       if (!user) return setUser(null);
@@ -92,15 +105,23 @@ export const App: FC = () => {
     });
   }, [user, username]);
 
-  // Fetch posts from DB and subscribe to DB updates to posts
   useEffect(() => {
-    return db.collection('posts').onSnapshot(snapshot => {
-      const posts = snapshot.docs.map(doc => ({
-        id: doc.id,
-        post: doc.data() as PostData,
-      }));
-      setPosts(posts);
-    });
+    return db
+      .collection('posts')
+      .orderBy('timestamp', 'desc')
+      .onSnapshot(
+        snapshot => {
+          const posts = snapshot.docs.map(doc => ({
+            id: doc.id,
+            post: doc.data() as PostData,
+          }));
+          setPosts(posts);
+        },
+        error => {
+          console.error(error);
+          setPosts(Error(error.message));
+        }
+      );
   }, []);
 
   return (
@@ -108,19 +129,19 @@ export const App: FC = () => {
       <Modal open={openSignInModal} onClose={() => setOpenSignInModal(false)}>
         <ModalContainer>
           <form>
-            <Columns pad={Pad.Medium} style={{ margin: `${Pad.Large} 0` }}>
+            <Columns pad={Pad.Medium} style={{ padding: `${Pad.Large} 0` }}>
               <TextField
                 placeholder="Email"
                 value={email}
                 onChange={event => setEmail(event.target.value)}
               />
               <TextField
-                type="Password"
-                placeholder="password"
+                type="password"
+                placeholder="Password"
                 value={password}
                 onChange={event => setPassword(event.target.value)}
               />
-              <Button variant="outlined" onClick={signIn}>
+              <Button variant="contained" onClick={signIn} color="primary">
                 Sign In
               </Button>
             </Columns>
@@ -130,7 +151,7 @@ export const App: FC = () => {
       <Modal open={openSignUpModal} onClose={() => setOpenSignUpModal(false)}>
         <ModalContainer>
           <form>
-            <Columns pad={Pad.Medium} style={{ margin: `${Pad.Large} 0` }}>
+            <Columns pad={Pad.Medium} style={{ padding: `${Pad.Large} 0` }}>
               <TextField
                 placeholder="Username"
                 value={username}
@@ -143,11 +164,11 @@ export const App: FC = () => {
               />
               <TextField
                 type="Password"
-                placeholder="password"
+                placeholder="Password"
                 value={password}
                 onChange={event => setPassword(event.target.value)}
               />
-              <Button variant="outlined" onClick={signUp}>
+              <Button variant="contained" onClick={signUp} color="primary">
                 Sign Up
               </Button>
             </Columns>
@@ -157,12 +178,21 @@ export const App: FC = () => {
       <Header>
         <Logo />
         {user ? (
-          <Button variant="outlined" onClick={() => auth.signOut()}>
-            Log Out
-          </Button>
+          <Rows pad={Pad.Medium}>
+            <Typography variant="body2" style={{ alignSelf: 'center' }}>
+              {user.displayName}
+            </Typography>
+            <Button variant="outlined" onClick={auth.signOut}>
+              Sign Out
+            </Button>
+          </Rows>
         ) : (
           <Rows pad={Pad.Medium}>
-            <Button variant="outlined" onClick={() => setOpenSignInModal(true)}>
+            <Button
+              variant="outlined"
+              onClick={() => setOpenSignInModal(true)}
+              color="primary"
+            >
               Sign In
             </Button>
             <Button variant="outlined" onClick={() => setOpenSignUpModal(true)}>
@@ -171,17 +201,42 @@ export const App: FC = () => {
           </Rows>
         )}
       </Header>
-      <ContentContainer pad={Pad.Large}>
-        <ImageUpload />
-        {posts.map(({ post, id }) => (
-          <Post
-            key={id}
-            username={post.username}
-            caption={post.caption}
-            imageUrl={post.imageUrl}
-          />
-        ))}
-      </ContentContainer>
+      <BodyContainer pad={Pad.Large}>
+        {user?.displayName ? (
+          <ImageUpload username={user.displayName} />
+        ) : (
+          <Button disabled style={{ margin: Pad.Large }}>
+            Sign in to upload
+          </Button>
+        )}
+        <DataStateView
+          data={posts}
+          loading={() => (
+            <Columns pad={Pad.Medium} style={{ alignItems: 'center' }}>
+              <CircularProgress />
+              <h4 style={{ color: 'lightgray' }}>Hold on, loading posts...</h4>
+            </Columns>
+          )}
+          error={() => (
+            <Columns pad={Pad.Medium} style={{ alignItems: 'center' }}>
+              <h4>Sorry! Something went wrong.</h4>
+            </Columns>
+          )}
+        >
+          {posts => (
+            <>
+              {posts.map(({ post, id }) => (
+                <Post
+                  key={id}
+                  username={post.username}
+                  caption={post.caption}
+                  imageUrl={post.imageUrl}
+                />
+              ))}
+            </>
+          )}
+        </DataStateView>
+      </BodyContainer>
     </AppContainer>
   );
 };

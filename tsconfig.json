@@ -13,7 +13,7 @@
     "noUnusedParameters": true,
     "strict": true,
     "noImplicitAny": true,
-    "noErrorTruncation": true,
+    "noErrorTruncation": false,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "module": "esnext",

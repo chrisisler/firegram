@@ -6,7 +6,7 @@ import { Pad, Rows } from './style';
 
 const Container = styled.div`
   background-color: #fff;
-  max-width: 500px;
+  width: 100%;
   border: 1px solid lightgray;
 `;
 
@@ -39,7 +39,7 @@ export const Post: FC<{
   return (
     <Container>
       <Header pad={Pad.Small}>
-        <Avatar src="/static/images/avatar/1.jpg" alt="A" />
+        <Avatar src="/static/images/avatar/1.jpg" alt="B" />
         <h3>{username}</h3>
       </Header>
       <Image src={imageUrl} />

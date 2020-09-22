@@ -3,13 +3,18 @@ import styled from 'styled-components';
 import { Modal, Button, TextField } from '@material-ui/core';
 
 import { Post } from './Post';
+import { ImageUpload } from './ImageUpload';
 import { Pad, Columns, Rows } from './style';
 import { db, auth } from './firebase';
 import { PostData } from './interfaces';
 
-const Container = styled.div``;
+const AppContainer = styled.div`
+  /* width: 100%;
+  margin: 0 auto; */
+`;
 
-const Header = styled.div`
+const Header = styled(Rows)`
+  justify-content: space-between;
   background-color: #fff;
   padding: ${Pad.Medium};
   border-bottom: 1px solid lightgray;
@@ -34,6 +39,12 @@ const ModalContainer = styled.div`
   border: none;
   box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.3);
   padding: ${Pad.Medium} ${Pad.Large};
+`;
+
+const ContentContainer = styled(Columns)`
+  max-width: 500px;
+  width: 500px;
+  margin: 0 auto;
 `;
 
 export const App: FC = () => {
@@ -93,7 +104,7 @@ export const App: FC = () => {
   }, []);
 
   return (
-    <Container>
+    <AppContainer>
       <Modal open={openSignInModal} onClose={() => setOpenSignInModal(false)}>
         <ModalContainer>
           <form>
@@ -145,22 +156,23 @@ export const App: FC = () => {
       </Modal>
       <Header>
         <Logo />
+        {user ? (
+          <Button variant="outlined" onClick={() => auth.signOut()}>
+            Log Out
+          </Button>
+        ) : (
+          <Rows pad={Pad.Medium}>
+            <Button variant="outlined" onClick={() => setOpenSignInModal(true)}>
+              Sign In
+            </Button>
+            <Button variant="outlined" onClick={() => setOpenSignUpModal(true)}>
+              Sign Up
+            </Button>
+          </Rows>
+        )}
       </Header>
-      {user ? (
-        <Button variant="outlined" onClick={() => auth.signOut()}>
-          Log Out
-        </Button>
-      ) : (
-        <Rows pad={Pad.Medium}>
-          <Button variant="outlined" onClick={() => setOpenSignInModal(true)}>
-            Sign In
-          </Button>
-          <Button variant="outlined" onClick={() => setOpenSignUpModal(true)}>
-            Sign Up
-          </Button>
-        </Rows>
-      )}
-      <Columns pad={Pad.Large}>
+      <ContentContainer pad={Pad.Large}>
+        <ImageUpload />
         {posts.map(({ post, id }) => (
           <Post
             key={id}
@@ -169,7 +181,7 @@ export const App: FC = () => {
             imageUrl={post.imageUrl}
           />
         ))}
-      </Columns>
-    </Container>
+      </ContentContainer>
+    </AppContainer>
   );
 };

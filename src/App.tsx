@@ -185,7 +185,7 @@ export const App: FC = () => {
             <Typography variant="body2" style={{ alignSelf: 'center' }}>
               {user.displayName}
             </Typography>
-            <Button variant="outlined" onClick={auth.signOut}>
+            <Button variant="outlined" onClick={() => auth.signOut()}>
               Sign Out
             </Button>
           </Rows>

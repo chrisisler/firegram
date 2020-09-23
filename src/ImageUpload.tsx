@@ -1,7 +1,7 @@
 import React, { useState, FC } from 'react';
 import { TextField, Button, LinearProgress } from '@material-ui/core';
 import styled from 'styled-components';
-import { firestore } from 'firebase';
+import { firestore } from 'firebase/app';
 
 import { db, storage } from './firebase';
 import { Columns, Pad } from './style';

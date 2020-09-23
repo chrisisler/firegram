@@ -9,7 +9,17 @@ export enum Pad {
   XLarge = '3rem',
 }
 
-export const Columns = styled.div`
+interface Props {
+  center?: boolean;
+  padding?: Pad | string;
+}
+
+const Div = styled.div`
+  align-items: ${({ center }: Props) => (center ? 'center' : 'initial')};
+  padding: ${({ padding }: Props) => padding};
+`;
+
+export const Columns = styled(Div)`
   display: flex;
   flex-direction: column;
 
@@ -18,7 +28,7 @@ export const Columns = styled.div`
   }
 `;
 
-export const Rows = styled.div`
+export const Rows = styled(Div)`
   display: flex;
 
   & > *:not(:last-child) {

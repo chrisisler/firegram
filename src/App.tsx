@@ -26,6 +26,8 @@ const Header = styled(Rows)`
   padding: ${Pad.Medium};
   border-bottom: 1px solid lightgray;
   object-fit: contain;
+  position: sticky;
+  top: 0;
 `;
 
 const Logo = styled.img.attrs(() => ({
@@ -46,6 +48,12 @@ const ModalContainer = styled.div`
   border: none;
   box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.3);
   padding: ${Pad.Medium} ${Pad.Large};
+`;
+
+const ModalFormContainer = styled(Columns).attrs(() => ({
+  pad: Pad.Medium,
+}))`
+  padding: ${Pad.Large} 0;
 `;
 
 const BodyContainer = styled(Columns)`
@@ -73,8 +81,7 @@ export const App: FC = () => {
         .createUserWithEmailAndPassword(email, password)
         .then(({ user }) => {
           user?.updateProfile({ displayName: username });
-          // Is this needed? Missed?
-          // if (user) setUser(user);
+          if (user) setUser(user);
         })
         .catch(error => alert(error.message));
       setOpenSignUpModal(false);
@@ -119,7 +126,7 @@ export const App: FC = () => {
         },
         error => {
           console.error(error);
-          setPosts(Error(error.message));
+          setPosts(DataState.error(error.message));
         }
       );
   }, []);
@@ -128,51 +135,47 @@ export const App: FC = () => {
     <AppContainer>
       <Modal open={openSignInModal} onClose={() => setOpenSignInModal(false)}>
         <ModalContainer>
-          <form>
-            <Columns pad={Pad.Medium} style={{ padding: `${Pad.Large} 0` }}>
-              <TextField
-                placeholder="Email"
-                value={email}
-                onChange={event => setEmail(event.target.value)}
-              />
-              <TextField
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={event => setPassword(event.target.value)}
-              />
-              <Button variant="contained" onClick={signIn} color="primary">
-                Sign In
-              </Button>
-            </Columns>
-          </form>
+          <ModalFormContainer as="form">
+            <TextField
+              label="Email"
+              value={email}
+              onChange={event => setEmail(event.target.value)}
+            />
+            <TextField
+              type="password"
+              label="Password"
+              value={password}
+              onChange={event => setPassword(event.target.value)}
+            />
+            <Button variant="contained" onClick={signIn} color="primary">
+              Sign In
+            </Button>
+          </ModalFormContainer>
         </ModalContainer>
       </Modal>
       <Modal open={openSignUpModal} onClose={() => setOpenSignUpModal(false)}>
         <ModalContainer>
-          <form>
-            <Columns pad={Pad.Medium} style={{ padding: `${Pad.Large} 0` }}>
-              <TextField
-                placeholder="Username"
-                value={username}
-                onChange={event => setUsername(event.target.value)}
-              />
-              <TextField
-                placeholder="Email"
-                value={email}
-                onChange={event => setEmail(event.target.value)}
-              />
-              <TextField
-                type="Password"
-                placeholder="Password"
-                value={password}
-                onChange={event => setPassword(event.target.value)}
-              />
-              <Button variant="contained" onClick={signUp} color="primary">
-                Sign Up
-              </Button>
-            </Columns>
-          </form>
+          <ModalFormContainer as="form">
+            <TextField
+              label="Username"
+              value={username}
+              onChange={event => setUsername(event.target.value)}
+            />
+            <TextField
+              label="Email"
+              value={email}
+              onChange={event => setEmail(event.target.value)}
+            />
+            <TextField
+              type="Password"
+              label="Password"
+              value={password}
+              onChange={event => setPassword(event.target.value)}
+            />
+            <Button variant="contained" onClick={signUp} color="primary">
+              Sign Up
+            </Button>
+          </ModalFormContainer>
         </ModalContainer>
       </Modal>
       <Header>
@@ -212,13 +215,13 @@ export const App: FC = () => {
         <DataStateView
           data={posts}
           loading={() => (
-            <Columns pad={Pad.Medium} style={{ alignItems: 'center' }}>
+            <Columns pad={Pad.Medium} center>
               <CircularProgress />
               <h4 style={{ color: 'lightgray' }}>Hold on, loading posts...</h4>
             </Columns>
           )}
           error={() => (
-            <Columns pad={Pad.Medium} style={{ alignItems: 'center' }}>
+            <Columns pad={Pad.Medium} center>
               <h4>Sorry! Something went wrong.</h4>
             </Columns>
           )}
@@ -226,12 +229,7 @@ export const App: FC = () => {
           {posts => (
             <>
               {posts.map(({ post, id }) => (
-                <Post
-                  key={id}
-                  username={post.username}
-                  caption={post.caption}
-                  imageUrl={post.imageUrl}
-                />
+                <Post key={id} postId={id} postData={post} user={user} />
               ))}
             </>
           )}

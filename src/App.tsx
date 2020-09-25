@@ -27,6 +27,7 @@ const Header = styled(Rows)`
   border-bottom: 1px solid lightgray;
   object-fit: contain;
   position: sticky;
+  z-index: 10;
   top: 0;
 `;
 

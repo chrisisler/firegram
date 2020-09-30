@@ -1,12 +1,13 @@
-import React, { FC, useEffect, useState, useMemo } from 'react';
+import React, { FC, useEffect, useState, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
-import { Avatar, Button } from '@material-ui/core';
+import { Avatar, Button, IconButton } from '@material-ui/core';
 import { User, firestore } from 'firebase/app';
+import DeleteOutlinedIcon from '@material-ui/icons/Delete';
 
 import { Pad, Rows, Columns } from './style';
 import { db } from './firebase';
 import { DataState, DataStateView } from './DataState';
-import { PostData, Comment } from './interfaces';
+import { Post, Comment } from './interfaces';
 
 const Container = styled.div`
   background-color: #fff;
@@ -49,68 +50,118 @@ const CommentInput = styled.input.attrs(() => ({
   border: none;
 `;
 
-const UserTextView: FC<{ username: string; text: string; large?: boolean }> = ({
-  username,
-  text,
-  large,
-}) => (
+const CommentContainer = styled(Rows)`
+  justify-content: space-between;
+  margin-right: ${Pad.Small};
+`;
+
+/** Presentational component. Renders IG-style text. */
+const UserTextView: FC<{
+  username: string;
+  text: string;
+  large?: boolean;
+}> = ({ username, text, large }) => (
   <Caption large={large}>
     <strong>{username}</strong>&nbsp;&nbsp;
     {text}
   </Caption>
 );
 
-export const Post: FC<{
-  postId: string;
-  postData: PostData;
+/**
+ * Presentational component. Displays a comment preceeded by the author name.
+ * Conditionally renders a delete button.
+ */
+const CommentView: FC<{
+  comment: Comment;
+  deletable: boolean;
+  deleteComment: () => void;
+}> = ({ deletable, comment, deleteComment }) => (
+  <CommentContainer>
+    <UserTextView
+      username={comment.username}
+      text={comment.text}
+      key={comment.timestamp}
+    />
+    {deletable && (
+      <IconButton
+        size="small"
+        edge="end"
+        aria-label="Delete Comment"
+        onClick={deleteComment}
+      >
+        <DeleteOutlinedIcon />
+      </IconButton>
+    )}
+  </CommentContainer>
+);
+
+/**
+ * Presentational component. Renders the core image content with a header and
+ * comments below.
+ */
+export const PostView: FC<{
+  id: string;
+  post: Post;
   user: User | null;
-}> = ({ postId, user, postData: { username, caption, imageUrl } }) => {
-  const [comments, setComments] = useState<DataState<Comment[]>>(
-    DataState.Loading
-  );
+}> = ({ id, user, post }) => {
+  /** The state of comment data for this post, fetched from firebase. */
+  const [comments, setComments] = useState<
+    DataState<{ id: string; comment: Comment }[]>
+  >(DataState.Loading);
+
+  /** Controlled input. */
   const [comment, setComment] = useState('');
 
+  /** Is the user actively editing the input? */
   const commenting = useMemo(() => comment.length > 0, [comment]);
 
+  const addComment = useCallback(
+    <E extends React.SyntheticEvent>(event: E) => {
+      event.preventDefault();
+      db.collection('posts').doc(id).collection('comments').add({
+        text: comment,
+        username: user?.displayName,
+        timestamp: firestore.FieldValue.serverTimestamp(),
+      });
+      setComment('');
+    },
+    [id, user, comment]
+  );
+
+  /** Subscribe to updates to the comments collection for UI updates. */
   useEffect(() => {
-    if (!postId) return;
+    if (!id) return;
     return db
       .collection('posts')
-      .doc(postId)
+      .doc(id)
       .collection('comments')
       .orderBy('timestamp', 'desc')
       .onSnapshot(
         ({ docs }) => {
-          const comments = docs.map(d => d.data() as Comment);
-          setComments(comments);
+          setComments(
+            docs.map(doc => ({
+              id: doc.id,
+              comment: doc.data() as Comment,
+            }))
+          );
         },
         error => {
           setComments(DataState.error(error.message));
         }
       );
-  }, [postId]);
-
-  const addComment = <E extends React.SyntheticEvent>(event: E) => {
-    event.preventDefault();
-    db.collection('posts').doc(postId).collection('comments').add({
-      text: comment,
-      username: user?.displayName,
-      timestamp: firestore.FieldValue.serverTimestamp(),
-    });
-    setComment('');
-  };
+  }, [id]);
 
   return (
     <Container>
       <Header pad={Pad.Small} center>
         <Avatar
           src="/static/images/avatar/1.jpg"
-          alt={username[0].toUpperCase()}
+          alt={post.username[0].toUpperCase()}
         />
-        <h3>{username}</h3>
+        <h3>{post.username}</h3>
       </Header>
-      <Image src={imageUrl} />
-      <UserTextView large username={username} text={caption} />
+      <Image src={post.imageUrl} />
+      <UserTextView large username={post.username} text={post.caption} />
       <DataStateView
         data={comments}
         loading={() => <UserTextView username="loading comments" text="" />}
@@ -120,8 +171,21 @@ export const Post: FC<{
       >
         {comments => (
           <Columns padding={`0 0 ${Pad.Small}`}>
-            {comments.map(({ text, username, timestamp }) => (
-              <UserTextView username={username} text={text} key={timestamp} />
+            {comments.map(c => (
+              <CommentView
+                comment={c.comment}
+                deletable={!!user}
+                deleteComment={() => {
+                  // Allow deletion if
+                  // 1) Post is made by authenticated user
+                  // 2) Comment is made by authenticated user
+                  db.collection('posts')
+                    .doc(id)
+                    .collection('comments')
+                    .doc(c.id)
+                    .delete();
+                }}
+              />
             ))}
           </Columns>
         )}

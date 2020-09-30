@@ -11,8 +11,9 @@
 ### potential features
 
 - avatar image upload during account creation
-- deleting comments
 - viewing all posts from an account (an account page)
-- add bad-word filtering on comments
-- add ML service bad-picture rejection on image upload
+- bad-word filtering on comments
+- ML service bad-picture rejection on image upload
 - private posts (viewable by only me)
+- enforce username uniqueness
+- commenting on comments (but no further (see TikTok, IG))

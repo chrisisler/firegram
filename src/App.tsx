@@ -10,11 +10,11 @@ import {
 import { User } from 'firebase/app';
 
 import { DataState, DataStateView } from './DataState';
-import { Post } from './Post';
+import { PostView } from './Post';
 import { ImageUpload } from './ImageUpload';
 import { Pad, Columns, Rows } from './style';
 import { db, auth } from './firebase';
-import { PostData } from './interfaces';
+import { Post } from './interfaces';
 
 const AppContainer = styled.div`
   padding-bottom: ${Pad.Large};
@@ -71,9 +71,9 @@ export const App: FC = () => {
   const [openSignInModal, setOpenSignInModal] = useState(false);
 
   const [user, setUser] = useState<User | null>(null);
-  const [posts, setPosts] = useState<
-    DataState<{ id: string; post: PostData }[]>
-  >([]);
+  const [posts, setPosts] = useState<DataState<{ id: string; post: Post }[]>>(
+    []
+  );
 
   const signUp = useCallback(
     (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -121,7 +121,7 @@ export const App: FC = () => {
         snapshot => {
           const posts = snapshot.docs.map(doc => ({
             id: doc.id,
-            post: doc.data() as PostData,
+            post: doc.data() as Post,
           }));
           setPosts(posts);
         },
@@ -230,7 +230,7 @@ export const App: FC = () => {
           {posts => (
             <>
               {posts.map(({ post, id }) => (
-                <Post key={id} postId={id} postData={post} user={user} />
+                <PostView key={id} id={id} post={post} user={user} />
               ))}
             </>
           )}

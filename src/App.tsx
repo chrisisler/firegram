@@ -83,6 +83,8 @@ export const App: FC = () => {
         .then(({ user }) => {
           user?.updateProfile({ displayName: username });
           if (user) setUser(user);
+          setEmail('');
+          setPassword('');
         })
         .catch(error => alert(error.message));
       setOpenSignUpModal(false);
@@ -97,6 +99,8 @@ export const App: FC = () => {
         .signInWithEmailAndPassword(email, password)
         .then(({ user }) => {
           if (user) setUser(user);
+          setEmail('');
+          setPassword('');
         })
         .catch(error => alert(error.message));
       setOpenSignInModal(false);
@@ -130,7 +134,7 @@ export const App: FC = () => {
           setPosts(DataState.error(error.message));
         }
       );
-  }, []);
+  }, [user]);
 
   return (
     <AppContainer>
@@ -207,7 +211,7 @@ export const App: FC = () => {
       </Header>
       <BodyContainer pad={Pad.Large}>
         {user?.displayName ? (
-          <ImageUpload username={user.displayName} />
+          <ImageUpload username={user.displayName} userId={user.uid} />
         ) : (
           <Button disabled style={{ margin: Pad.Large }}>
             Sign in to upload

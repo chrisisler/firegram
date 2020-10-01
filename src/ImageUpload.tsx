@@ -12,7 +12,10 @@ const Container = styled.div`
   border-bottom: 1px solid lightgray;
 `;
 
-export const ImageUpload: FC<{ username: string }> = ({ username }) => {
+export const ImageUpload: FC<{ username: string; userId?: string }> = ({
+  username,
+  userId,
+}) => {
   const [caption, setCaption] = useState('');
   const [progress, setProgress] = useState(0);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -38,6 +41,7 @@ export const ImageUpload: FC<{ username: string }> = ({ username }) => {
             db.collection('posts').add({
               timestamp: firestore.FieldValue.serverTimestamp(),
               caption: caption.trim(),
+              authorId: userId,
               imageUrl,
               username,
             });

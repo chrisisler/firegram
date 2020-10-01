@@ -121,6 +121,7 @@ export const PostView: FC<{
       db.collection('posts').doc(id).collection('comments').add({
         text: comment,
         username: user?.displayName,
+        userId: user?.uid,
         timestamp: firestore.FieldValue.serverTimestamp(),
       });
       setComment('');
@@ -171,22 +172,26 @@ export const PostView: FC<{
       >
         {comments => (
           <Columns padding={`0 0 ${Pad.Small}`}>
-            {comments.map(c => (
-              <CommentView
-                comment={c.comment}
-                deletable={!!user}
-                deleteComment={() => {
-                  // Allow deletion if
-                  // 1) Post is made by authenticated user
-                  // 2) Comment is made by authenticated user
-                  db.collection('posts')
-                    .doc(id)
-                    .collection('comments')
-                    .doc(c.id)
-                    .delete();
-                }}
-              />
-            ))}
+            {comments.map(({ comment, id: commentId }) => {
+              const userAuthoredPostOrComment =
+                !!user &&
+                (user.uid === comment.userId || user.uid === post.userId);
+              return (
+                <CommentView
+                  key={commentId}
+                  comment={comment}
+                  deletable={userAuthoredPostOrComment}
+                  deleteComment={() => {
+                    if (!userAuthoredPostOrComment) return;
+                    db.collection('posts')
+                      .doc(id)
+                      .collection('comments')
+                      .doc(commentId)
+                      .delete();
+                  }}
+                />
+              );
+            })}
           </Columns>
         )}
       </DataStateView>

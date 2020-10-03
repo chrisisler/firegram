@@ -5,6 +5,7 @@ import { firestore } from 'firebase/app';
 
 import { db, storage } from './firebase';
 import { Columns, Pad } from './style';
+import { Post } from './interfaces';
 
 const Container = styled.div`
   padding: ${Pad.Large};
@@ -41,10 +42,10 @@ export const ImageUpload: FC<{ username: string; userId?: string }> = ({
             db.collection('posts').add({
               timestamp: firestore.FieldValue.serverTimestamp(),
               caption: caption.trim(),
-              authorId: userId,
+              userId,
               imageUrl,
               username,
-            });
+            } as Post);
             setProgress(0);
             setCaption('');
             setImageFile(null);

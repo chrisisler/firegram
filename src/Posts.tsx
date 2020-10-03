@@ -1,11 +1,18 @@
 import React, { FC, useEffect, useState, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
-import { Avatar, Button, IconButton } from '@material-ui/core';
-import { User, firestore } from 'firebase/app';
+import {
+  Avatar,
+  Button,
+  IconButton,
+  Typography,
+  CircularProgress,
+} from '@material-ui/core';
+import { firestore } from 'firebase/app';
 import DeleteOutlinedIcon from '@material-ui/icons/Delete';
+import { Link } from 'react-router-dom';
 
 import { Pad, Rows, Columns } from './style';
-import { db } from './firebase';
+import { auth, db } from './firebase';
 import { DataState, DataStateView } from './DataState';
 import { Post, Comment } from './interfaces';
 
@@ -80,7 +87,7 @@ const CommentView: FC<{
     <UserTextView
       username={comment.username}
       text={comment.text}
-      key={comment.timestamp}
+      key={comment.timestamp + ''}
     />
     {deletable && (
       <IconButton
@@ -99,11 +106,10 @@ const CommentView: FC<{
  * Presentational component. Renders the core image content with a header and
  * comments below.
  */
-export const PostView: FC<{
+const PostView: FC<{
   id: string;
   post: Post;
-  user: User | null;
-}> = ({ id, user, post }) => {
+}> = ({ id, post }) => {
   /** The state of comment data for this post, fetched from firebase. */
   const [comments, setComments] = useState<
     DataState<{ id: string; comment: Comment }[]>
@@ -118,15 +124,18 @@ export const PostView: FC<{
   const addComment = useCallback(
     <E extends React.SyntheticEvent>(event: E) => {
       event.preventDefault();
-      db.collection('posts').doc(id).collection('comments').add({
-        text: comment,
-        username: user?.displayName,
-        userId: user?.uid,
-        timestamp: firestore.FieldValue.serverTimestamp(),
-      });
+      db.collection('posts')
+        .doc(id)
+        .collection('comments')
+        .add({
+          text: comment,
+          username: auth.currentUser?.displayName,
+          userId: auth.currentUser?.uid,
+          timestamp: firestore.FieldValue.serverTimestamp(),
+        } as Comment);
       setComment('');
     },
-    [id, user, comment]
+    [id, comment]
   );
 
   /** Subscribe to updates to the comments collection for UI updates. */
@@ -155,27 +164,41 @@ export const PostView: FC<{
   return (
     <Container>
       <Header pad={Pad.Small} center>
-        <Avatar
-          src="/static/images/avatar/1.jpg"
-          alt={post.username[0].toUpperCase()}
-        />
-        <h3>{post.username}</h3>
+        <Avatar src="/static/images/avatar/1.jpg" alt={post.username[0]} />
+        <Typography variant="h6" color="textPrimary">
+          <Link
+            to={`/${post.username}`}
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            {post.username}
+          </Link>
+        </Typography>
       </Header>
       <Image src={post.imageUrl} />
       <UserTextView large username={post.username} text={post.caption} />
       <DataStateView
         data={comments}
-        loading={() => <UserTextView username="loading comments" text="" />}
+        loading={() => (
+          <Columns pad={Pad.Medium} center>
+            <CircularProgress />
+          </Columns>
+        )}
         error={() => (
-          <UserTextView username="could not load comments" text="" />
+          <Columns pad={Pad.Medium} center>
+            <Typography variant="h6" color="error">
+              Could not load comments.
+            </Typography>
+          </Columns>
         )}
       >
         {comments => (
           <Columns padding={`0 0 ${Pad.Small}`}>
             {comments.map(({ comment, id: commentId }) => {
+              // TODO uid -> username
               const userAuthoredPostOrComment =
-                !!user &&
-                (user.uid === comment.userId || user.uid === post.userId);
+                !!auth.currentUser &&
+                (auth.currentUser.uid === comment.userId ||
+                  auth.currentUser.uid === post.userId);
               return (
                 <CommentView
                   key={commentId}
@@ -195,7 +218,7 @@ export const PostView: FC<{
           </Columns>
         )}
       </DataStateView>
-      {!!user && (
+      {!!auth.currentUser && (
         <AddCommentContainer as="form" onSubmit={addComment}>
           <CommentInput onChange={event => setComment(event.target.value)} />
           {commenting && (
@@ -210,5 +233,35 @@ export const PostView: FC<{
         </AddCommentContainer>
       )}
     </Container>
+  );
+};
+
+export const Posts: FC<{
+  posts: DataState<{ id: string; post: Post }[]>;
+}> = ({ posts }) => {
+  return (
+    <DataStateView
+      data={posts}
+      loading={() => (
+        <Columns pad={Pad.Medium} center>
+          <CircularProgress />
+        </Columns>
+      )}
+      error={() => (
+        <Columns pad={Pad.Medium} center>
+          <Typography variant="h5" color="error">
+            Sorry! Something went wrong.
+          </Typography>
+        </Columns>
+      )}
+    >
+      {posts => (
+        <>
+          {posts.map(({ post, id }) => (
+            <PostView key={id} id={id} post={post} />
+          ))}
+        </>
+      )}
+    </DataStateView>
   );
 };

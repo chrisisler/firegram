@@ -1,16 +1,12 @@
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import {
-  Modal,
-  Button,
-  TextField,
-  CircularProgress,
-  Typography,
-} from '@material-ui/core';
+import { Modal, Button, TextField, Typography } from '@material-ui/core';
 import { User } from 'firebase/app';
+import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 
-import { DataState, DataStateView } from './DataState';
-import { PostView } from './Post';
+import { AccountPage } from './AccountPage';
+import { DataState } from './DataState';
+import { Posts } from './Posts';
 import { ImageUpload } from './ImageUpload';
 import { Pad, Columns, Rows } from './style';
 import { db, auth } from './firebase';
@@ -81,8 +77,13 @@ export const App: FC = () => {
       auth
         .createUserWithEmailAndPassword(email, password)
         .then(({ user }) => {
-          user?.updateProfile({ displayName: username });
-          if (user) setUser(user);
+          if (user) {
+            user.updateProfile({ displayName: username });
+            db.collection('users').add({
+              username,
+              email,
+            });
+          }
           setEmail('');
           setPassword('');
         })
@@ -122,19 +123,16 @@ export const App: FC = () => {
       .collection('posts')
       .orderBy('timestamp', 'desc')
       .onSnapshot(
-        snapshot => {
-          const posts = snapshot.docs.map(doc => ({
-            id: doc.id,
-            post: doc.data() as Post,
-          }));
-          setPosts(posts);
-        },
-        error => {
-          console.error(error);
-          setPosts(DataState.error(error.message));
-        }
+        ({ docs }) =>
+          setPosts(
+            docs.map(doc => ({
+              id: doc.id,
+              post: doc.data() as Post,
+            }))
+          ),
+        error => setPosts(DataState.error(error.message))
       );
-  }, [user]);
+  }, []);
 
   return (
     <AppContainer>
@@ -210,35 +208,23 @@ export const App: FC = () => {
         )}
       </Header>
       <BodyContainer pad={Pad.Large}>
-        {user?.displayName ? (
-          <ImageUpload username={user.displayName} userId={user.uid} />
-        ) : (
-          <Button disabled style={{ margin: Pad.Large }}>
-            Sign in to upload
-          </Button>
-        )}
-        <DataStateView
-          data={posts}
-          loading={() => (
-            <Columns pad={Pad.Medium} center>
-              <CircularProgress />
-              <h4 style={{ color: 'lightgray' }}>Hold on, loading posts...</h4>
-            </Columns>
-          )}
-          error={() => (
-            <Columns pad={Pad.Medium} center>
-              <h4>Sorry! Something went wrong.</h4>
-            </Columns>
-          )}
-        >
-          {posts => (
-            <>
-              {posts.map(({ post, id }) => (
-                <PostView key={id} id={id} post={post} user={user} />
-              ))}
-            </>
-          )}
-        </DataStateView>
+        <Router>
+          <Switch>
+            <Route exact path="/">
+              {user?.displayName ? (
+                <ImageUpload username={user.displayName} userId={user.uid} />
+              ) : (
+                <Button disabled style={{ margin: Pad.Large }}>
+                  Sign in to upload
+                </Button>
+              )}
+              <Posts posts={posts} />
+            </Route>
+            <Route path="/:username">
+              <AccountPage />
+            </Route>
+          </Switch>
+        </Router>
       </BodyContainer>
     </AppContainer>
   );

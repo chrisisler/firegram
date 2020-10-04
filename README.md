@@ -12,6 +12,7 @@
 
 ### potential features
 
+- clickable comment usernames
 - avatar image upload during account creation
 - bad-word filtering on comments
 - ML service bad-picture rejection on image upload

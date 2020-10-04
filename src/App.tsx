@@ -55,7 +55,6 @@ const ModalFormContainer = styled(Columns).attrs(() => ({
 
 const BodyContainer = styled(Columns)`
   max-width: 500px;
-  width: 500px;
   margin: 0 auto;
 `;
 

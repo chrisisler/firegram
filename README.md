@@ -12,11 +12,16 @@
 
 ### potential features
 
+- post hamburger menu
+  - delete (in red)
+  - editable caption (Edit)
+- add support for video (start/stop/mute/autoplay)
+  - video only works on mobile/safari
 - clickable comment usernames
 - avatar image upload during account creation
 - bad-word filtering on comments
 - ML service bad-picture rejection on image upload
-- private posts (viewable by only me)
 - enforce username uniqueness
-- commenting on comments (but no further (see TikTok, IG))
+- commenting on comments
 - change comment userId to username due to uniqueness
+- optional bio on account creation

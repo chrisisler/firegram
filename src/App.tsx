@@ -18,10 +18,10 @@ const AppContainer = styled.div`
 
 const Header = styled(Rows)`
   justify-content: space-between;
+  align-items: center;
   background-color: #fff;
   padding: ${Pad.Medium};
   border-bottom: 1px solid lightgray;
-  object-fit: contain;
   position: sticky;
   z-index: 10;
   top: 0;
@@ -33,6 +33,7 @@ const Logo = styled.img.attrs(() => ({
   alt: 'Instagram',
 }))`
   width: 120px;
+  object-fit: contain;
 `;
 
 const ModalContainer = styled.div`

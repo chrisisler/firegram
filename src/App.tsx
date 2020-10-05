@@ -212,7 +212,7 @@ export const App: FC = () => {
           <Switch>
             <Route exact path="/">
               {user?.displayName ? (
-                <ImageUpload username={user.displayName} userId={user.uid} />
+                <ImageUpload username={user.displayName} />
               ) : (
                 <Button disabled style={{ margin: Pad.Large }}>
                   Sign in to upload

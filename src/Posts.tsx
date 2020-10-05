@@ -130,7 +130,6 @@ const PostView: FC<{
         .add({
           text: comment,
           username: auth.currentUser?.displayName,
-          userId: auth.currentUser?.uid,
           timestamp: firestore.FieldValue.serverTimestamp(),
         } as Comment);
       setComment('');
@@ -194,11 +193,10 @@ const PostView: FC<{
         {comments => (
           <Columns padding={`0 0 ${Pad.Small}`}>
             {comments.map(({ comment, id: commentId }) => {
-              // TODO uid -> username
               const userAuthoredPostOrComment =
-                !!auth.currentUser &&
-                (auth.currentUser.uid === comment.userId ||
-                  auth.currentUser.uid === post.userId);
+                !!auth.currentUser?.displayName &&
+                (auth.currentUser.displayName === comment.username ||
+                  auth.currentUser.displayName === post.username);
               return (
                 <CommentView
                   key={commentId}
@@ -236,6 +234,10 @@ const PostView: FC<{
   );
 };
 
+/**
+ * Presentational Component. Renders a column of IG-style posts, with an
+ * appropriate UI if the posts are loading or failed to load.
+ */
 export const Posts: FC<{
   posts: DataState<{ id: string; post: Post }[]>;
 }> = ({ posts }) => {

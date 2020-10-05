@@ -23,5 +23,4 @@
 - ML service bad-picture rejection on image upload
 - enforce username uniqueness
 - commenting on comments
-- change comment userId to username due to uniqueness
 - optional bio on account creation

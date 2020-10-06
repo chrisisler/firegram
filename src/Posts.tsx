@@ -1,4 +1,11 @@
-import React, { FC, useEffect, useState, useMemo, useCallback } from 'react';
+import React, {
+  FC,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import styled from 'styled-components';
 import {
   Avatar,
@@ -66,6 +73,10 @@ const CommentContainer = styled(Columns).attrs(() => ({
   }
 `;
 
+/** Trim and append ellipsis to a given string if it exceeds some limit. */
+const truncate = (limit: number, str: string): string =>
+  str?.length > limit ? str?.substr(0, limit - 1) + '...' : str;
+
 /** Presentational component. Renders IG-style text. */
 const UserTextView: FC<{
   username: string;
@@ -88,18 +99,23 @@ const CommentView: FC<{
   comment: Comment;
   deletable: boolean;
   reply: () => void;
-  /** A Firebase query for `Comment`-shaped replies to this comment. */
-  repliesDb: firestore.Query;
+  repliesQuery: firestore.Query;
   deleteComment: () => void;
   deleteReply: (replyId: string) => void;
-}> = ({ comment, deletable, reply, deleteComment, deleteReply, repliesDb }) => {
+}> = ({
+  comment,
+  deletable,
+  reply,
+  deleteComment,
+  deleteReply,
+  repliesQuery,
+}) => {
   const [replies, setReplies] = useState<
     DataState<{ id: string; reply: Comment }[]>
   >(DataState.Empty);
 
-  // Fetch replies to this comment
   useEffect(() => {
-    return repliesDb.onSnapshot(
+    return repliesQuery.onSnapshot(
       ({ docs }) =>
         setReplies(
           docs.map(row => ({
@@ -109,7 +125,7 @@ const CommentView: FC<{
         ),
       error => setReplies(DataState.error(error.message))
     );
-  }, [repliesDb]);
+  }, [repliesQuery]);
 
   return (
     <CommentContainer>
@@ -132,17 +148,21 @@ const CommentView: FC<{
       </Rows>
       {DataState.isReady(replies) && (
         <Columns>
-          {replies.map(({ id, reply: { username, text } }) => (
-            <Rows between>
-              <UserTextView key={id} username={username} text={text} />
-              <IconButton
-                size="small"
-                edge="end"
-                aria-label="Delete Reply"
-                onClick={() => deleteReply(id)}
-              >
-                <DeleteOutlinedIcon />
-              </IconButton>
+          {replies.map(({ id, reply }) => (
+            <Rows between key={id}>
+              <UserTextView username={reply.username} text={reply.text} />
+              {auth.currentUser?.displayName &&
+                (auth.currentUser.displayName === reply.username ||
+                  auth.currentUser.displayName === comment.username) && (
+                  <IconButton
+                    size="small"
+                    edge="end"
+                    aria-label="Delete Reply"
+                    onClick={() => deleteReply(id)}
+                  >
+                    <DeleteOutlinedIcon />
+                  </IconButton>
+                )}
             </Rows>
           ))}
         </Columns>
@@ -162,28 +182,27 @@ const PostView: FC<{
   id: string;
   post: Post;
 }> = ({ id, post }) => {
-  /** The state of comment data for this post, fetched from firebase. */
+  const commentRef = useRef<HTMLInputElement>(null);
+
   const [comments, setComments] = useState<
     DataState<{ id: string; comment: Comment }[]>
   >(DataState.Loading);
-
-  /** Controlled input. */
-  const [comment, setComment] = useState('');
-
   const [replyingTo, setReplyingTo] = useState<{
     comment: Comment;
     commentId: string;
   } | null>(null);
 
-  /** Is the user actively editing the input? */
-  const commenting = useMemo(() => comment.length > 0, [comment]);
+  const commenting =
+    commentRef.current?.value !== undefined &&
+    commentRef.current?.value.length > 0;
 
   const addComment = useCallback(
     <E extends React.SyntheticEvent>(event: E) => {
       event.preventDefault();
       if (!auth.currentUser?.displayName) return;
+      if (!commentRef.current || !commentRef.current.value) return;
       const entry: Comment = {
-        text: comment.trim(),
+        text: commentRef.current.value.trim(),
         username: auth.currentUser.displayName,
         timestamp: firestore.FieldValue.serverTimestamp(),
       };
@@ -197,9 +216,9 @@ const PostView: FC<{
       } else {
         db.collection('posts').doc(id).collection('comments').add(entry);
       }
-      setComment('');
+      commentRef.current.value = '';
     },
-    [id, comment, replyingTo]
+    [id, replyingTo]
   );
 
   /** Subscribe to updates to the comments collection for UI updates. */
@@ -268,9 +287,13 @@ const PostView: FC<{
                 <CommentView
                   key={commentId}
                   comment={comment}
-                  reply={() => setReplyingTo({ comment, commentId })}
+                  reply={() => {
+                    if (commentRef.current) commentRef.current.value = '';
+                    setReplyingTo({ comment, commentId });
+                    commentRef.current?.focus();
+                  }}
                   deletable={userAuthoredPostOrComment}
-                  repliesDb={commentDocument
+                  repliesQuery={commentDocument
                     .collection('replies')
                     .orderBy('timestamp', 'desc')}
                   deleteComment={() => {
@@ -291,17 +314,22 @@ const PostView: FC<{
       {!!auth.currentUser && (
         <AddCommentContainer as="form" onSubmit={addComment}>
           <CommentInput
-            onChange={event => setComment(event.target.value)}
+            ref={commentRef}
             placeholder={
               !!replyingTo
-                ? `Reply to ${
-                    replyingTo.comment.username
-                  }: ${replyingTo.comment.text.slice(0, 6).trim()}...`
+                ? `Reply to ${replyingTo.comment.username}: ${truncate(
+                    6,
+                    replyingTo.comment.text
+                  )}`
                 : 'Add a comment...'
             }
           />
           {commenting && (
-            <Button color="primary" style={{ margin: `0 ${Pad.Medium}` }}>
+            <Button
+              color="primary"
+              style={{ margin: `0 ${Pad.Medium}` }}
+              onClick={addComment}
+            >
               {!!replyingTo ? 'Reply' : 'Comment'}
             </Button>
           )}

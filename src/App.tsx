@@ -16,6 +16,7 @@ const AppContainer = styled.div`
 `;
 
 const Header = styled(Rows)`
+  width: 100vw;
   justify-content: space-between;
   align-items: center;
   background-color: #fff;

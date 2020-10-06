@@ -12,7 +12,6 @@
 
 ### potential features
 
-1. commenting on comments
 1. add support for video (start/stop/mute/autoplay)
   - video only works on mobile/safari
 1. post hamburger menu
@@ -21,8 +20,9 @@
 1. avatar image upload during account creation
   - requires db schema changes
 1. bad-word filtering on comments
-1. move comment input to `useRef`
-1. Use Column/Row `between` prop
+1. add `id` to interfaces
+1. fix `commenting`
+1. use Column/Row `between` prop
 1. ML service bad-picture rejection on image upload
 1. enforce username uniqueness
 1. optional bio on account creation

@@ -21,6 +21,8 @@
 1. avatar image upload during account creation
   - requires db schema changes
 1. bad-word filtering on comments
+1. move comment input to `useRef`
+1. Use Column/Row `between` prop
 1. ML service bad-picture rejection on image upload
 1. enforce username uniqueness
 1. optional bio on account creation

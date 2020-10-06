@@ -12,11 +12,14 @@ export enum Pad {
 interface Props {
   center?: boolean;
   padding?: Pad | string;
+  between?: boolean;
 }
 
 const Div = styled.div`
   align-items: ${({ center }: Props) => (center ? 'center' : 'initial')};
   padding: ${({ padding }: Props) => padding};
+  justify-content: ${({ between }: Props) =>
+    between ? 'space-between' : 'initial'};
 `;
 
 export const Columns = styled(Div)`

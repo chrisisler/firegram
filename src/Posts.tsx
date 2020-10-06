@@ -48,7 +48,6 @@ const AddCommentContainer = styled(Rows)`
 
 const CommentInput = styled.input.attrs(() => ({
   type: 'text',
-  placeholder: 'Add a comment...',
 }))`
   font-size: 0.9em;
   box-sizing: content-box;
@@ -57,9 +56,14 @@ const CommentInput = styled.input.attrs(() => ({
   border: none;
 `;
 
-const CommentContainer = styled(Rows)`
-  justify-content: space-between;
+const CommentContainer = styled(Columns).attrs(() => ({
+  between: true,
+}))`
   margin-right: ${Pad.Small};
+
+  & > *:not(:first-child) {
+    margin-left: ${Pad.Medium};
+  }
 `;
 
 /** Presentational component. Renders IG-style text. */
@@ -80,33 +84,75 @@ const UserTextView: FC<{
   </Caption>
 );
 
-/**
- * Presentational component. Displays a comment preceeded by the author name.
- * Conditionally renders a delete button.
- */
 const CommentView: FC<{
   comment: Comment;
   deletable: boolean;
+  reply: () => void;
+  /** A Firebase query for `Comment`-shaped replies to this comment. */
+  repliesDb: firestore.Query;
   deleteComment: () => void;
-}> = ({ deletable, comment, deleteComment }) => (
-  <CommentContainer>
-    <UserTextView
-      username={comment.username}
-      text={comment.text}
-      key={comment.timestamp + ''}
-    />
-    {deletable && (
-      <IconButton
-        size="small"
-        edge="end"
-        aria-label="Delete Comment"
-        onClick={deleteComment}
-      >
-        <DeleteOutlinedIcon />
-      </IconButton>
-    )}
-  </CommentContainer>
-);
+  deleteReply: (replyId: string) => void;
+}> = ({ comment, deletable, reply, deleteComment, deleteReply, repliesDb }) => {
+  const [replies, setReplies] = useState<
+    DataState<{ id: string; reply: Comment }[]>
+  >(DataState.Empty);
+
+  // Fetch replies to this comment
+  useEffect(() => {
+    return repliesDb.onSnapshot(
+      ({ docs }) =>
+        setReplies(
+          docs.map(row => ({
+            id: row.id,
+            reply: row.data() as Comment,
+          }))
+        ),
+      error => setReplies(DataState.error(error.message))
+    );
+  }, [repliesDb]);
+
+  return (
+    <CommentContainer>
+      <Rows between>
+        <UserTextView
+          username={comment.username}
+          text={comment.text}
+          key={comment.timestamp + ''}
+        />
+        {deletable && (
+          <IconButton
+            size="small"
+            edge="end"
+            aria-label="Delete Comment"
+            onClick={deleteComment}
+          >
+            <DeleteOutlinedIcon />
+          </IconButton>
+        )}
+      </Rows>
+      {DataState.isReady(replies) && (
+        <Columns>
+          {replies.map(({ id, reply: { username, text } }) => (
+            <Rows between>
+              <UserTextView key={id} username={username} text={text} />
+              <IconButton
+                size="small"
+                edge="end"
+                aria-label="Delete Reply"
+                onClick={() => deleteReply(id)}
+              >
+                <DeleteOutlinedIcon />
+              </IconButton>
+            </Rows>
+          ))}
+        </Columns>
+      )}
+      <Typography variant="subtitle2" color="textSecondary" onClick={reply}>
+        &nbsp; &nbsp; &nbsp; Reply
+      </Typography>
+    </CommentContainer>
+  );
+};
 
 /**
  * Presentational component. Renders the core image content with a header and
@@ -124,23 +170,36 @@ const PostView: FC<{
   /** Controlled input. */
   const [comment, setComment] = useState('');
 
+  const [replyingTo, setReplyingTo] = useState<{
+    comment: Comment;
+    commentId: string;
+  } | null>(null);
+
   /** Is the user actively editing the input? */
   const commenting = useMemo(() => comment.length > 0, [comment]);
 
   const addComment = useCallback(
     <E extends React.SyntheticEvent>(event: E) => {
       event.preventDefault();
-      db.collection('posts')
-        .doc(id)
-        .collection('comments')
-        .add({
-          text: comment,
-          username: auth.currentUser?.displayName,
-          timestamp: firestore.FieldValue.serverTimestamp(),
-        } as Comment);
+      if (!auth.currentUser?.displayName) return;
+      const entry: Comment = {
+        text: comment.trim(),
+        username: auth.currentUser.displayName,
+        timestamp: firestore.FieldValue.serverTimestamp(),
+      };
+      if (replyingTo) {
+        db.collection('posts')
+          .doc(id)
+          .collection('comments')
+          .doc(replyingTo.commentId)
+          .collection('replies')
+          .add(entry);
+      } else {
+        db.collection('posts').doc(id).collection('comments').add(entry);
+      }
       setComment('');
     },
-    [id, comment]
+    [id, comment, replyingTo]
   );
 
   /** Subscribe to updates to the comments collection for UI updates. */
@@ -152,17 +211,14 @@ const PostView: FC<{
       .collection('comments')
       .orderBy('timestamp', 'desc')
       .onSnapshot(
-        ({ docs }) => {
+        ({ docs }) =>
           setComments(
             docs.map(doc => ({
               id: doc.id,
               comment: doc.data() as Comment,
             }))
-          );
-        },
-        error => {
-          setComments(DataState.error(error.message));
-        }
+          ),
+        error => setComments(DataState.error(error.message))
       );
   }, [id]);
 
@@ -203,18 +259,28 @@ const PostView: FC<{
                 !!auth.currentUser?.displayName &&
                 (auth.currentUser.displayName === comment.username ||
                   auth.currentUser.displayName === post.username);
+              const commentDocument = db
+                .collection('posts')
+                .doc(id)
+                .collection('comments')
+                .doc(commentId);
               return (
                 <CommentView
                   key={commentId}
                   comment={comment}
+                  reply={() => setReplyingTo({ comment, commentId })}
                   deletable={userAuthoredPostOrComment}
+                  repliesDb={commentDocument
+                    .collection('replies')
+                    .orderBy('timestamp', 'desc')}
                   deleteComment={() => {
                     if (!userAuthoredPostOrComment) return;
-                    db.collection('posts')
-                      .doc(id)
-                      .collection('comments')
-                      .doc(commentId)
-                      .delete();
+                    commentDocument.delete();
+                    setReplyingTo(null);
+                  }}
+                  deleteReply={(replyId: string) => {
+                    commentDocument.collection('replies').doc(replyId).delete();
+                    setReplyingTo(null);
                   }}
                 />
               );
@@ -224,10 +290,19 @@ const PostView: FC<{
       </DataStateView>
       {!!auth.currentUser && (
         <AddCommentContainer as="form" onSubmit={addComment}>
-          <CommentInput onChange={event => setComment(event.target.value)} />
+          <CommentInput
+            onChange={event => setComment(event.target.value)}
+            placeholder={
+              !!replyingTo
+                ? `Reply to ${
+                    replyingTo.comment.username
+                  }: ${replyingTo.comment.text.slice(0, 6).trim()}...`
+                : 'Add a comment...'
+            }
+          />
           {commenting && (
             <Button color="primary" style={{ margin: `0 ${Pad.Medium}` }}>
-              Comment
+              {!!replyingTo ? 'Reply' : 'Comment'}
             </Button>
           )}
         </AddCommentContainer>

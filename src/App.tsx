@@ -1,7 +1,6 @@
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Modal, Button, TextField, Typography } from '@material-ui/core';
-import { User } from 'firebase/app';
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 
 import { AccountPage } from './AccountPage';
@@ -10,7 +9,7 @@ import { Posts } from './Posts';
 import { ImageUpload } from './ImageUpload';
 import { Pad, Columns, Rows } from './style';
 import { db, auth } from './firebase';
-import { Post } from './interfaces';
+import { Post, User } from './interfaces';
 
 const AppContainer = styled.div`
   padding-bottom: ${Pad.Large};
@@ -66,7 +65,7 @@ export const App: FC = () => {
   const [openSignUpModal, setOpenSignUpModal] = useState(false);
   const [openSignInModal, setOpenSignInModal] = useState(false);
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState(auth.currentUser);
   const [posts, setPosts] = useState<DataState<{ id: string; post: Post }[]>>(
     []
   );
@@ -76,13 +75,14 @@ export const App: FC = () => {
       event.preventDefault();
       auth
         .createUserWithEmailAndPassword(email, password)
-        .then(({ user }) => {
+        .then(async ({ user }) => {
           if (user) {
-            user.updateProfile({ displayName: username });
             db.collection('users').add({
               username,
               email,
-            });
+            } as User);
+            await user.updateProfile({ displayName: username });
+            setUser(user);
           }
           setEmail('');
           setPassword('');
@@ -98,7 +98,7 @@ export const App: FC = () => {
       event.preventDefault();
       auth
         .signInWithEmailAndPassword(email, password)
-        .then(({ user }) => {
+        .then(() => {
           if (user) setUser(user);
           setEmail('');
           setPassword('');
@@ -106,7 +106,7 @@ export const App: FC = () => {
         .catch(error => alert(error.message));
       setOpenSignInModal(false);
     },
-    [email, password]
+    [user, email, password]
   );
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export const App: FC = () => {
         return user.updateProfile({ displayName: username });
       }
     });
-  }, [user, username]);
+  }, [username]);
 
   useEffect(() => {
     return db
@@ -183,10 +183,10 @@ export const App: FC = () => {
       </Modal>
       <Header>
         <Logo />
-        {user ? (
+        {!!auth.currentUser ? (
           <Rows pad={Pad.Medium}>
             <Typography variant="body2" style={{ alignSelf: 'center' }}>
-              {user.displayName}
+              {auth.currentUser?.displayName}
             </Typography>
             <Button variant="outlined" onClick={() => auth.signOut()}>
               Sign Out
@@ -211,8 +211,8 @@ export const App: FC = () => {
         <Router>
           <Switch>
             <Route exact path="/">
-              {user?.displayName ? (
-                <ImageUpload username={user.displayName} />
+              {auth.currentUser?.displayName ? (
+                <ImageUpload username={auth.currentUser.displayName} />
               ) : (
                 <Button disabled style={{ margin: Pad.Large }}>
                   Sign in to upload

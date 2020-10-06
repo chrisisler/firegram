@@ -24,3 +24,11 @@ export interface Comment {
   /** The time the comment was posted. */
   timestamp: firestore.FieldValue;
 }
+
+export interface User {
+  /** The unique username for the account. */
+  username: string;
+
+  /** The email of the account. */
+  email: string;
+}

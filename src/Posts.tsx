@@ -220,11 +220,7 @@ const PostView: FC<{
         <AddCommentContainer as="form" onSubmit={addComment}>
           <CommentInput onChange={event => setComment(event.target.value)} />
           {commenting && (
-            <Button
-              onClick={addComment}
-              color="primary"
-              style={{ margin: `0 ${Pad.Medium}` }}
-            >
+            <Button color="primary" style={{ margin: `0 ${Pad.Medium}` }}>
               Comment
             </Button>
           )}

@@ -12,7 +12,6 @@
 
 ### potential features
 
-1. clickable comment usernames
 1. commenting on comments
 1. add support for video (start/stop/mute/autoplay)
   - video only works on mobile/safari

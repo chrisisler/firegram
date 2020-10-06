@@ -69,7 +69,13 @@ const UserTextView: FC<{
   large?: boolean;
 }> = ({ username, text, large }) => (
   <Caption large={large}>
-    <strong>{username}</strong>&nbsp;&nbsp;
+    <Link
+      to={`/${username}`}
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      <strong>{username}</strong>
+    </Link>
+    &nbsp;&nbsp;
     {text}
   </Caption>
 );

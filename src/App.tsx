@@ -67,9 +67,7 @@ export const App: FC = () => {
   const [openSignInModal, setOpenSignInModal] = useState(false);
 
   const [user, setUser] = useState(auth.currentUser);
-  const [posts, setPosts] = useState<DataState<{ id: string; post: Post }[]>>(
-    []
-  );
+  const [posts, setPosts] = useState<DataState<Post[]>>([]);
 
   const signUp = useCallback(
     (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -78,10 +76,11 @@ export const App: FC = () => {
         .createUserWithEmailAndPassword(email, password)
         .then(async ({ user }) => {
           if (user) {
-            db.collection('users').add({
+            const entry: User = {
               username,
               email,
-            } as User);
+            };
+            db.collection('users').add(entry);
             await user.updateProfile({ displayName: username });
             setUser(user);
           }
@@ -126,10 +125,11 @@ export const App: FC = () => {
       .onSnapshot(
         ({ docs }) =>
           setPosts(
-            docs.map(doc => ({
-              id: doc.id,
-              post: doc.data() as Post,
-            }))
+            docs.map(row => {
+              const post = row.data();
+              post.id = row.id;
+              return post as Post;
+            })
           ),
         error => setPosts(DataState.error(error.message))
       );

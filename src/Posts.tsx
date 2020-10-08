@@ -1,11 +1,4 @@
-import React, {
-  FC,
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  useMemo,
-} from 'react';
+import React, { FC, useEffect, useState, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 import {
   Avatar,
@@ -184,17 +177,22 @@ const PostView: FC<{
 }> = ({ id, post }) => {
   const commentRef = useRef<HTMLInputElement>(null);
 
-  const [comments, setComments] = useState<
-    DataState<{ id: string; comment: Comment }[]>
-  >(DataState.Loading);
-  const [replyingTo, setReplyingTo] = useState<{
-    comment: Comment;
-    commentId: string;
-  } | null>(null);
+  const [comments, setComments] = useState<DataState<Comment[]>>(
+    DataState.Loading
+  );
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
 
-  const commenting =
-    commentRef.current?.value !== undefined &&
-    commentRef.current?.value.length > 0;
+  const [commenting, setCommenting] = useState(false);
+  useEffect(() => {
+    if (
+      commentRef.current?.value !== undefined &&
+      commentRef.current?.value.length > 0
+    ) {
+      setCommenting(true);
+    } else {
+      setCommenting(false);
+    }
+  }, []);
 
   const addComment = useCallback(
     <E extends React.SyntheticEvent>(event: E) => {
@@ -202,6 +200,7 @@ const PostView: FC<{
       if (!auth.currentUser?.displayName) return;
       if (!commentRef.current || !commentRef.current.value) return;
       const entry: Comment = {
+        id: '',
         text: commentRef.current.value.trim(),
         username: auth.currentUser.displayName,
         timestamp: firestore.FieldValue.serverTimestamp(),
@@ -210,7 +209,7 @@ const PostView: FC<{
         db.collection('posts')
           .doc(id)
           .collection('comments')
-          .doc(replyingTo.commentId)
+          .doc(replyingTo.id)
           .collection('replies')
           .add(entry);
       } else {
@@ -232,10 +231,11 @@ const PostView: FC<{
       .onSnapshot(
         ({ docs }) =>
           setComments(
-            docs.map(doc => ({
-              id: doc.id,
-              comment: doc.data() as Comment,
-            }))
+            docs.map(row => {
+              const comment = row.data();
+              comment.id = row.id;
+              return comment as Comment;
+            })
           ),
         error => setComments(DataState.error(error.message))
       );
@@ -273,7 +273,7 @@ const PostView: FC<{
       >
         {comments => (
           <Columns padding={`0 0 ${Pad.Small}`}>
-            {comments.map(({ comment, id: commentId }) => {
+            {comments.map(comment => {
               const userAuthoredPostOrComment =
                 !!auth.currentUser?.displayName &&
                 (auth.currentUser.displayName === comment.username ||
@@ -282,14 +282,14 @@ const PostView: FC<{
                 .collection('posts')
                 .doc(id)
                 .collection('comments')
-                .doc(commentId);
+                .doc(comment.id);
               return (
                 <CommentView
-                  key={commentId}
+                  key={comment.id}
                   comment={comment}
                   reply={() => {
                     if (commentRef.current) commentRef.current.value = '';
-                    setReplyingTo({ comment, commentId });
+                    setReplyingTo(comment);
                     commentRef.current?.focus();
                   }}
                   deletable={userAuthoredPostOrComment}
@@ -317,9 +317,9 @@ const PostView: FC<{
             ref={commentRef}
             placeholder={
               !!replyingTo
-                ? `Reply to ${replyingTo.comment.username}: ${truncate(
+                ? `Reply to ${replyingTo.username}: ${truncate(
                     6,
-                    replyingTo.comment.text
+                    replyingTo.text
                   )}`
                 : 'Add a comment...'
             }
@@ -343,9 +343,7 @@ const PostView: FC<{
  * Presentational Component. Renders a column of IG-style posts, with an
  * appropriate UI if the posts are loading or failed to load.
  */
-export const Posts: FC<{
-  posts: DataState<{ id: string; post: Post }[]>;
-}> = ({ posts }) => {
+export const Posts: FC<{ posts: DataState<Post[]> }> = ({ posts }) => {
   return (
     <DataStateView
       data={posts}
@@ -364,8 +362,8 @@ export const Posts: FC<{
     >
       {posts => (
         <>
-          {posts.map(({ post, id }) => (
-            <PostView key={id} id={id} post={post} />
+          {posts.map(p => (
+            <PostView key={p.id} id={p.id} post={p} />
           ))}
         </>
       )}

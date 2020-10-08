@@ -31,9 +31,7 @@ export const AccountPage: FC = () => {
     [username]
   );
 
-  const [posts, setPosts] = useState<DataState<{ id: string; post: Post }[]>>(
-    DataState.Empty
-  );
+  const [posts, setPosts] = useState<DataState<Post[]>>(DataState.Empty);
 
   useEffect(() => {
     if (!(DataState.isReady(userExists) && userExists)) return;
@@ -44,10 +42,11 @@ export const AccountPage: FC = () => {
       .onSnapshot(
         ({ docs }) =>
           setPosts(
-            docs.map(row => ({
-              id: row.id,
-              post: row.data() as Post,
-            }))
+            docs.map(row => {
+              const post = row.data();
+              post.id = row.id;
+              return post as Post;
+            })
           ),
         error => setPosts(DataState.error(error.message))
       );

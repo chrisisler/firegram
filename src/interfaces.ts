@@ -1,8 +1,10 @@
 import { firestore } from 'firebase/app';
 
 export interface Post {
+  readonly id: string;
+
   /** The author of the comment. */
-  username: string;
+  readonly username: string;
 
   /** The author's initial comment on the post. */
   caption: string;
@@ -15,6 +17,8 @@ export interface Post {
 }
 
 export interface Comment {
+  readonly id: string;
+
   /** The content of the comment. */
   text: string;
 
@@ -27,8 +31,8 @@ export interface Comment {
 
 export interface User {
   /** The unique username for the account. */
-  username: string;
+  readonly username: string;
 
   /** The email of the account. */
-  email: string;
+  readonly email: string;
 }

@@ -20,7 +20,6 @@
 1. avatar image upload during account creation
   - requires db schema changes
 1. bad-word filtering on comments
-1. add `id` to interfaces
 1. fix `commenting`
 1. use Column/Row `between` prop
 1. ML service bad-picture rejection on image upload

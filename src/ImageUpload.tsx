@@ -1,4 +1,4 @@
-import React, { useState, FC } from 'react';
+import React, { useState, useCallback, FC } from 'react';
 import { TextField, Button, LinearProgress } from '@material-ui/core';
 import styled from 'styled-components';
 import { firestore } from 'firebase/app';
@@ -22,7 +22,7 @@ export const ImageUpload: FC<{ username: string }> = ({ username }) => {
   const [progress, setProgress] = useState(0);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const upload = () => {
+  const upload = useCallback(() => {
     if (!imageFile) return;
     const uploading = storage.ref(`images/${imageFile.name}`).put(imageFile);
     uploading.on(
@@ -40,19 +40,21 @@ export const ImageUpload: FC<{ username: string }> = ({ username }) => {
           .child(imageFile.name)
           .getDownloadURL()
           .then(imageUrl => {
-            db.collection('posts').add({
+            const entry: Post = {
+              id: '',
               timestamp: firestore.FieldValue.serverTimestamp(),
               caption: caption.trim(),
               imageUrl,
               username,
-            } as Post);
+            };
+            db.collection('posts').add(entry);
             setProgress(0);
             setCaption('');
             setImageFile(null);
           });
       }
     );
-  };
+  }, [caption, imageFile, username]);
 
   return (
     <Container>

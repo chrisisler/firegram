@@ -7,6 +7,7 @@
 - Make comments on posts as a user
 - Delete comments you make and on your posts
 - View all posts by a user / account page
+- Keyboard accessible
 
 [See the application live.](https://firegram-62656.web.app/)
 
@@ -20,7 +21,8 @@
 1. avatar image upload during account creation
   - requires db schema changes
 1. bad-word filtering on comments
-1. fix `commenting`
+1. fix CommentView props from db
+1. switch from auth.currentUser to react context
 1. use Column/Row `between` prop
 1. ML service bad-picture rejection on image upload
 1. enforce username uniqueness

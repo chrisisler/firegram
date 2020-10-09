@@ -4,6 +4,7 @@ import {
   Avatar,
   Button,
   IconButton,
+  Link as MuiLink,
   Typography,
   CircularProgress,
 } from '@material-ui/core';
@@ -92,6 +93,7 @@ const CommentView: FC<{
   comment: Comment;
   deletable: boolean;
   reply: () => void;
+  // This is an awkward way to handle fetching db rows
   repliesQuery: firestore.Query;
   deleteComment: () => void;
   deleteReply: (replyId: string) => void;
@@ -104,6 +106,7 @@ const CommentView: FC<{
   repliesQuery,
 }) => {
   const [replies, setReplies] = useState<
+    // TODO Remove `id`
     DataState<{ id: string; reply: Comment }[]>
   >(DataState.Empty);
 
@@ -112,6 +115,7 @@ const CommentView: FC<{
       ({ docs }) =>
         setReplies(
           docs.map(row => ({
+            // TODO Remove `id`
             id: row.id,
             reply: row.data() as Comment,
           }))
@@ -139,6 +143,18 @@ const CommentView: FC<{
           </IconButton>
         )}
       </Rows>
+      <Typography variant="subtitle2" color="textSecondary">
+        <MuiLink
+          onClick={reply}
+          style={{
+            marginLeft: Pad.Large,
+            textDecoration: 'none',
+            color: 'inherit',
+          }}
+        >
+          Reply
+        </MuiLink>
+      </Typography>
       {DataState.isReady(replies) && (
         <Columns>
           {replies.map(({ id, reply }) => (
@@ -160,9 +176,6 @@ const CommentView: FC<{
           ))}
         </Columns>
       )}
-      <Typography variant="subtitle2" color="textSecondary" onClick={reply}>
-        &nbsp; &nbsp; &nbsp; Reply
-      </Typography>
     </CommentContainer>
   );
 };
@@ -176,23 +189,12 @@ const PostView: FC<{
   post: Post;
 }> = ({ id, post }) => {
   const commentRef = useRef<HTMLInputElement>(null);
+  const [comment, setComment] = useState('');
 
   const [comments, setComments] = useState<DataState<Comment[]>>(
     DataState.Loading
   );
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
-
-  const [commenting, setCommenting] = useState(false);
-  useEffect(() => {
-    if (
-      commentRef.current?.value !== undefined &&
-      commentRef.current?.value.length > 0
-    ) {
-      setCommenting(true);
-    } else {
-      setCommenting(false);
-    }
-  }, []);
 
   const addComment = useCallback(
     <E extends React.SyntheticEvent>(event: E) => {
@@ -215,7 +217,7 @@ const PostView: FC<{
       } else {
         db.collection('posts').doc(id).collection('comments').add(entry);
       }
-      commentRef.current.value = '';
+      setComment('');
     },
     [id, replyingTo]
   );
@@ -315,6 +317,8 @@ const PostView: FC<{
         <AddCommentContainer as="form" onSubmit={addComment}>
           <CommentInput
             ref={commentRef}
+            value={comment}
+            onChange={event => setComment(event.target.value)}
             placeholder={
               !!replyingTo
                 ? `Reply to ${replyingTo.username}: ${truncate(
@@ -324,7 +328,7 @@ const PostView: FC<{
                 : 'Add a comment...'
             }
           />
-          {commenting && (
+          {comment.length > 0 && (
             <Button
               color="primary"
               style={{ margin: `0 ${Pad.Medium}` }}

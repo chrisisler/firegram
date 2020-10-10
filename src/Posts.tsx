@@ -68,6 +68,12 @@ const CommentContainer = styled(Columns).attrs(() => ({
   }
 `;
 
+const ReplyTextButton = styled(MuiLink)`
+  text-decoration: none;
+  color: inherit;
+  margin-left: ${Pad.Large};
+`;
+
 /** Trim and append ellipsis to a given string if it exceeds some limit. */
 const truncate = (limit: number, str: string): string =>
   str?.length > limit ? str?.substr(0, limit - 1) + '...' : str;
@@ -106,10 +112,7 @@ const CommentView: FC<{
   deleteReply,
   repliesQuery,
 }) => {
-  const [replies, setReplies] = useState<
-    // TODO Remove `id`
-    DataState<{ id: string; reply: Comment }[]>
-  >(DataState.Empty);
+  const [replies, setReplies] = useState<DataState<Comment[]>>(DataState.Empty);
 
   const [user] = useUser();
 
@@ -117,11 +120,11 @@ const CommentView: FC<{
     return repliesQuery.onSnapshot(
       ({ docs }) =>
         setReplies(
-          docs.map(row => ({
-            // TODO Remove `id`
-            id: row.id,
-            reply: row.data() as Comment,
-          }))
+          docs.map(row => {
+            const comment = row.data();
+            comment.id = row.id;
+            return comment as Comment;
+          })
         ),
       error => setReplies(DataState.error(error.message))
     );
@@ -147,21 +150,14 @@ const CommentView: FC<{
         )}
       </Rows>
       <Typography variant="subtitle2" color="textSecondary">
-        <MuiLink
-          onClick={reply}
-          style={{
-            marginLeft: Pad.Large,
-            textDecoration: 'none',
-            color: 'inherit',
-          }}
-        >
+        <ReplyTextButton onClick={reply} >
           Reply
-        </MuiLink>
+        </ReplyTextButton>
       </Typography>
       {DataState.isReady(replies) && (
         <Columns>
-          {replies.map(({ id, reply }) => (
-            <Rows between key={id}>
+          {replies.map(reply => (
+            <Rows between key={reply.id}>
               <UserTextView username={reply.username} text={reply.text} />
               {user?.displayName &&
                 (user.displayName === reply.username ||
@@ -170,7 +166,7 @@ const CommentView: FC<{
                     size="small"
                     edge="end"
                     aria-label="Delete Reply"
-                    onClick={() => deleteReply(id)}
+                    onClick={() => deleteReply(reply.id)}
                   >
                     <DeleteOutlinedIcon />
                   </IconButton>

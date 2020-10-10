@@ -13,17 +13,12 @@
 
 ### potential features
 
-1. add support for video (start/stop/mute/autoplay)
-  - video only works on mobile/safari
-1. post hamburger menu
-  - delete (in red)
-  - editable caption (Edit)
+1. support for video
+1. delete post
+1. edit caption
 1. avatar image upload during account creation
-  - requires db schema changes
 1. bad-word filtering on comments
 1. fix CommentView props from db
-1. switch from auth.currentUser to react context
-1. use Column/Row `between` prop
 1. ML service bad-picture rejection on image upload
 1. enforce username uniqueness
 1. optional bio on account creation

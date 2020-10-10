@@ -10,6 +10,7 @@ import { ImageUpload } from './ImageUpload';
 import { Pad, Columns, Rows } from './style';
 import { db, auth } from './firebase';
 import { Post, User } from './interfaces';
+import { useUser } from './hooks';
 
 const AppContainer = styled.div`
   padding-bottom: ${Pad.Large};
@@ -66,8 +67,9 @@ export const App: FC = () => {
   const [openSignUpModal, setOpenSignUpModal] = useState(false);
   const [openSignInModal, setOpenSignInModal] = useState(false);
 
-  const [user, setUser] = useState(auth.currentUser);
   const [posts, setPosts] = useState<DataState<Post[]>>([]);
+
+  const [user, setUser] = useUser();
 
   const signUp = useCallback(
     (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -81,6 +83,7 @@ export const App: FC = () => {
               email,
             };
             db.collection('users').add(entry);
+            // `await` may be unnecessary, see updateProfile docs
             await user.updateProfile({ displayName: username });
             setUser(user);
           }
@@ -90,7 +93,7 @@ export const App: FC = () => {
         .catch(error => alert(error.message));
       setOpenSignUpModal(false);
     },
-    [email, password, username]
+    [email, password, username, setUser]
   );
 
   const signIn = useCallback(
@@ -106,14 +109,13 @@ export const App: FC = () => {
         .catch(error => alert(error.message));
       setOpenSignInModal(false);
     },
-    [user, email, password]
+    [user, email, password, setUser]
   );
 
   useEffect(() => {
     return auth.onAuthStateChanged(user => {
-      if (!user) return setUser(null);
-      if (!user.displayName) {
-        return user.updateProfile({ displayName: username });
+      if (user && !user.displayName) {
+        user.updateProfile({ displayName: username });
       }
     });
   }, [username]);
@@ -184,10 +186,10 @@ export const App: FC = () => {
       </Modal>
       <Header>
         <Logo />
-        {!!auth.currentUser ? (
+        {user?.displayName ? (
           <Rows pad={Pad.Medium}>
             <Typography variant="body2" style={{ alignSelf: 'center' }}>
-              {auth.currentUser?.displayName}
+              {user.displayName}
             </Typography>
             <Button variant="outlined" onClick={() => auth.signOut()}>
               Sign Out
@@ -212,8 +214,8 @@ export const App: FC = () => {
         <Router>
           <Switch>
             <Route exact path="/">
-              {auth.currentUser?.displayName ? (
-                <ImageUpload username={auth.currentUser.displayName} />
+              {user?.displayName ? (
+                <ImageUpload />
               ) : (
                 <Button disabled style={{ margin: Pad.Large }}>
                   Sign in to upload

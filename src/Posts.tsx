@@ -13,9 +13,10 @@ import DeleteOutlinedIcon from '@material-ui/icons/Delete';
 import { Link } from 'react-router-dom';
 
 import { Pad, Rows, Columns } from './style';
-import { auth, db } from './firebase';
+import { db } from './firebase';
 import { DataState, DataStateView } from './DataState';
 import { Post, Comment } from './interfaces';
+import { useUser } from './hooks';
 
 const Container = styled.div`
   background-color: #fff;
@@ -110,6 +111,8 @@ const CommentView: FC<{
     DataState<{ id: string; reply: Comment }[]>
   >(DataState.Empty);
 
+  const [user] = useUser();
+
   useEffect(() => {
     return repliesQuery.onSnapshot(
       ({ docs }) =>
@@ -160,9 +163,9 @@ const CommentView: FC<{
           {replies.map(({ id, reply }) => (
             <Rows between key={id}>
               <UserTextView username={reply.username} text={reply.text} />
-              {auth.currentUser?.displayName &&
-                (auth.currentUser.displayName === reply.username ||
-                  auth.currentUser.displayName === comment.username) && (
+              {user?.displayName &&
+                (user.displayName === reply.username ||
+                  user.displayName === comment.username) && (
                   <IconButton
                     size="small"
                     edge="end"
@@ -196,15 +199,16 @@ const PostView: FC<{
   );
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
 
+  const [user] = useUser();
+
   const addComment = useCallback(
     <E extends React.SyntheticEvent>(event: E) => {
       event.preventDefault();
-      if (!auth.currentUser?.displayName) return;
-      if (!commentRef.current || !commentRef.current.value) return;
+      if (!user?.displayName || !commentRef.current?.value) return;
       const entry: Comment = {
         id: '',
         text: commentRef.current.value.trim(),
-        username: auth.currentUser.displayName,
+        username: user.displayName,
         timestamp: firestore.FieldValue.serverTimestamp(),
       };
       if (replyingTo) {
@@ -219,7 +223,7 @@ const PostView: FC<{
       }
       setComment('');
     },
-    [id, replyingTo]
+    [id, replyingTo, user]
   );
 
   /** Subscribe to updates to the comments collection for UI updates. */
@@ -277,9 +281,9 @@ const PostView: FC<{
           <Columns padding={`0 0 ${Pad.Small}`}>
             {comments.map(comment => {
               const userAuthoredPostOrComment =
-                !!auth.currentUser?.displayName &&
-                (auth.currentUser.displayName === comment.username ||
-                  auth.currentUser.displayName === post.username);
+                !!user?.displayName &&
+                (user.displayName === comment.username ||
+                  user.displayName === post.username);
               const commentDocument = db
                 .collection('posts')
                 .doc(id)
@@ -313,7 +317,7 @@ const PostView: FC<{
           </Columns>
         )}
       </DataStateView>
-      {!!auth.currentUser && (
+      {!!user && (
         <AddCommentContainer as="form" onSubmit={addComment}>
           <CommentInput
             ref={commentRef}

@@ -65,6 +65,8 @@ export const ImageUpload: FC = () => {
       <Columns pad={Pad.Small}>
         <input
           type="file"
+          multiple={false}
+          accept="image/*,video/*"
           onChange={({ target: { files } }) => {
             if (files) setImageFile(files[0]);
           }}

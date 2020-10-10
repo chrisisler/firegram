@@ -1,6 +1,12 @@
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { Modal, Button, TextField, Typography } from '@material-ui/core';
+import {
+  Modal,
+  Button,
+  TextField,
+  Typography,
+  FormLabel,
+} from '@material-ui/core';
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 
 import { AccountPage } from './AccountPage';
@@ -8,7 +14,7 @@ import { DataState } from './DataState';
 import { Posts } from './Posts';
 import { ImageUpload } from './ImageUpload';
 import { Pad, Columns, Rows } from './style';
-import { db, auth } from './firebase';
+import { db, auth, storage } from './firebase';
 import { Post, User } from './interfaces';
 import { useUser } from './hooks';
 
@@ -66,6 +72,7 @@ export const App: FC = () => {
   const [password, setPassword] = useState('');
   const [openSignUpModal, setOpenSignUpModal] = useState(false);
   const [openSignInModal, setOpenSignInModal] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [posts, setPosts] = useState<DataState<Post[]>>([]);
 
@@ -74,13 +81,35 @@ export const App: FC = () => {
   const signUp = useCallback(
     (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
       event.preventDefault();
+      // Uploading an avatar image for a user is optional upon account creation.
+      // `avatarUpload` represents the task of uploading that image to Firebase.
+      const avatarUpload: Promise<string> | null =
+        avatarFile &&
+        new Promise((resolve, reject) => {
+          storage
+            .ref(`avatars/${avatarFile.name}`)
+            .put(avatarFile)
+            .on('state_changed', null, null, () => {
+              storage
+                .ref('avatars')
+                .child(avatarFile.name)
+                .getDownloadURL()
+                .then(resolve)
+                .catch(reject);
+            });
+        });
       auth
         .createUserWithEmailAndPassword(email, password)
         .then(async ({ user }) => {
           if (user) {
+            // TODO This could be throwing an error, because the user isnt being
+            // added to the users collection
+            // Error POST 403 (forbidden) from Firebase with the image upload url
+            const avatarUrl = await avatarUpload;
             const entry: User = {
               username,
               email,
+              avatarUrl,
             };
             db.collection('users').add(entry);
             // `await` may be unnecessary, see updateProfile docs
@@ -89,11 +118,12 @@ export const App: FC = () => {
           }
           setEmail('');
           setPassword('');
+          setAvatarFile(null);
         })
         .catch(error => alert(error.message));
       setOpenSignUpModal(false);
     },
-    [email, password, username, setUser]
+    [email, password, username, setUser, avatarFile]
   );
 
   const signIn = useCallback(
@@ -114,6 +144,7 @@ export const App: FC = () => {
 
   useEffect(() => {
     return auth.onAuthStateChanged(user => {
+      // Did the user just sign up?
       if (user && !user.displayName) {
         user.updateProfile({ displayName: username });
       }
@@ -162,6 +193,20 @@ export const App: FC = () => {
       <Modal open={openSignUpModal} onClose={() => setOpenSignUpModal(false)}>
         <ModalContainer>
           <ModalFormContainer as="form">
+            <Rows between>
+              <FormLabel htmlFor="file">
+                Avatar <small>(optional)</small>
+              </FormLabel>
+              <input
+                type="file"
+                id="file"
+                multiple={false}
+                accept="image/*"
+                onChange={({ target: { files } }) => {
+                  if (files) setAvatarFile(files[0]);
+                }}
+              />
+            </Rows>
             <TextField
               label="Username"
               value={username}
@@ -186,7 +231,7 @@ export const App: FC = () => {
       </Modal>
       <Header>
         <Logo />
-        {user?.displayName ? (
+        {user ? (
           <Rows pad={Pad.Medium}>
             <Typography variant="body2" style={{ alignSelf: 'center' }}>
               {user.displayName}
@@ -214,7 +259,7 @@ export const App: FC = () => {
         <Router>
           <Switch>
             <Route exact path="/">
-              {user?.displayName ? (
+              {user ? (
                 <ImageUpload />
               ) : (
                 <Button disabled style={{ margin: Pad.Large }}>

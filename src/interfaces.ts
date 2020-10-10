@@ -10,10 +10,10 @@ export interface Post {
   caption: string;
 
   /** The location of the image for the post. */
-  imageUrl: string;
+  readonly imageUrl: string;
 
   /** The time the post was posted. */
-  timestamp: firestore.FieldValue;
+  readonly timestamp: firestore.FieldValue;
 }
 
 export interface Comment {
@@ -23,10 +23,10 @@ export interface Comment {
   text: string;
 
   /** The author of the comment. */
-  username: string;
+  readonly username: string;
 
   /** The time the comment was posted. */
-  timestamp: firestore.FieldValue;
+  readonly timestamp: firestore.FieldValue;
 }
 
 export interface User {
@@ -35,4 +35,7 @@ export interface User {
 
   /** The email of the account. */
   readonly email: string;
+
+  /** The location of the avatar image for the account, if it exists. */
+  readonly avatarUrl: string | null;
 }

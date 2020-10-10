@@ -6,6 +6,8 @@ import { auth } from './firebase';
 /**
  * Get the currently logged-in user, if it exists.
  * This is the preferred method over `auth.currentUser`.
+ * If using `user` to conditionally render UI, use `user && foo` over
+ * `user?.displayName && foo`.
  */
 export const useUser = (): [
   FirebaseUser | null,

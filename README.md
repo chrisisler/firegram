@@ -22,7 +22,10 @@
 - Optional avatar image upload on account creation
   - Avatar update on account page
 - Optional bio on account creation
+- Support multiple upload
+- Make header username clickable
 
 ### dev
 
 - Fix CommentView props from db
+- Replace collection arg names with enum values

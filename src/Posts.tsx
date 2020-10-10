@@ -14,8 +14,8 @@ import { Link } from 'react-router-dom';
 
 import { Pad, Rows, Columns } from './style';
 import { db } from './firebase';
-import { DataState, DataStateView } from './DataState';
-import { Post, Comment } from './interfaces';
+import { DataState, DataStateView, useDataState } from './DataState';
+import { Post, Comment, User } from './interfaces';
 import { useUser } from './hooks';
 
 const Container = styled.div`
@@ -196,6 +196,17 @@ const PostView: FC<{
 
   const [user] = useUser();
 
+  const [avatarUrl] = useDataState(
+    () =>
+      db
+        .collection('users')
+        .where('username', '==', post.username)
+        .get()
+        .then(({ docs }) => (docs?.[0].data() as User).avatarUrl)
+        .catch(() => DataState.error()),
+    [post.username]
+  );
+
   const addComment = useCallback(
     <E extends React.SyntheticEvent>(event: E) => {
       event.preventDefault();
@@ -245,7 +256,14 @@ const PostView: FC<{
   return (
     <Container>
       <Header pad={Pad.Small} center>
-        <Avatar src="/static/images/avatar/1.jpg" alt={post.username[0]} />
+        <Avatar
+          src={
+            avatarUrl && DataState.isReady(avatarUrl)
+              ? avatarUrl
+              : '/static/images/avatar/1.jpg'
+          }
+          alt={post.username[0]}
+        />
         <Typography variant="h6" color="textPrimary">
           <Link
             to={`/${post.username}`}
@@ -312,14 +330,14 @@ const PostView: FC<{
           </Columns>
         )}
       </DataStateView>
-      {!!user && (
+      {user && (
         <AddCommentContainer as="form" onSubmit={addComment}>
           <CommentInput
             ref={commentRef}
             value={comment}
             onChange={event => setComment(event.target.value)}
             placeholder={
-              !!replyingTo
+              replyingTo
                 ? `Reply to ${replyingTo.username}: ${truncate(
                     6,
                     replyingTo.text
@@ -333,7 +351,7 @@ const PostView: FC<{
               style={{ margin: `0 ${Pad.Medium}` }}
               onClick={addComment}
             >
-              {!!replyingTo ? 'Reply' : 'Comment'}
+              {replyingTo ? 'Reply' : 'Comment'}
             </Button>
           )}
         </AddCommentContainer>

@@ -70,8 +70,9 @@ const CommentContainer = styled(Columns).attrs(() => ({
 
 const ReplyTextButton = styled(MuiLink)`
   text-decoration: none;
-  color: inherit;
-  margin-left: ${Pad.Large};
+  color: inherit !important;
+  padding-left: ${Pad.Large};
+  font-size: smaller;
 `;
 
 /** Trim and append ellipsis to a given string if it exceeds some limit. */
@@ -150,9 +151,7 @@ const CommentView: FC<{
         )}
       </Rows>
       <Typography variant="subtitle2" color="textSecondary">
-        <ReplyTextButton onClick={reply} >
-          Reply
-        </ReplyTextButton>
+        <ReplyTextButton onClick={reply}>Reply</ReplyTextButton>
       </Typography>
       {DataState.isReady(replies) && (
         <Columns>
